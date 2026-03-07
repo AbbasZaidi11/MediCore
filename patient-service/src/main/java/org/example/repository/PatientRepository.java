@@ -10,8 +10,8 @@ import java.util.UUID;
 public interface PatientRepository extends JpaRepository<Patient, UUID> {
     boolean existsByEmail(String email);
     boolean existsByEmailAndIdNot(String email,UUID id);
+    
 //    Check if there exists a record where:
 //    email = given email
 //    AND id is NOT equal to given id
-
 }

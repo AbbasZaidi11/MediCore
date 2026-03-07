@@ -14,16 +14,13 @@ import lombok.extern.slf4j.Slf4j;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-
     //The below function would be called when the @Validation annotations we have used in controllers fail
     public ResponseEntity<Map<String, String>> handleValidationException(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
-
         ex.getBindingResult().getFieldErrors().forEach(
                 error -> errors.put(error.getField(), error.getDefaultMessage()));
 //      When validation fails, Spring internally stores all validation errors inside a BindingResult object.
 //      .getFieldErrors()-> This extracts only field-level errors.
-
         return ResponseEntity.badRequest().body(errors);
     }
 
@@ -37,11 +34,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(PatientNotFoundException.class)
     public ResponseEntity<Map<String, String>> handlePatientNotFoundException(PatientNotFoundException ex) {
-        log.warn("Patient not found {}",ex.getMessage());
-        Map<String,String> errors = new HashMap<>();
-        errors.put("message","Patient not found");
+        log.warn("Patient not found {}", ex.getMessage());
+        Map<String, String> errors = new HashMap<>();
+        errors.put("message", "Patient not found");
         return ResponseEntity.badRequest().body(errors);
     }
-
-
 }

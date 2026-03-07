@@ -26,6 +26,4 @@ public class PatientMapper {
         return patient;
     }
 
-
-
 }

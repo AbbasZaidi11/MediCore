@@ -4,6 +4,7 @@ import org.example.dto.PatientRequestDTO;
 import org.example.dto.PatientResponseDTO;
 import org.example.exception.EmailAlreadyExistsException;
 import org.example.exception.PatientNotFoundException;
+import org.example.grpc.BillingServiceGrpcClient;
 import org.example.mapper.PatientMapper;
 import org.example.model.Patient;
 import org.example.repository.PatientRepository;
@@ -14,21 +15,18 @@ import java.util.*;
 
 @Service
 public class PatientService {
-    private PatientRepository patientRepository;
 
-    public PatientService(PatientRepository patientRepository) {
+    private PatientRepository patientRepository;
+    private final BillingServiceGrpcClient billingServiceGrpcClient;
+
+    public PatientService(PatientRepository patientRepository, BillingServiceGrpcClient billingServiceGrpcClient) {
         this.patientRepository = patientRepository;
+        this.billingServiceGrpcClient = billingServiceGrpcClient;
     }
 
     public List<PatientResponseDTO> getPatients() {
         List<Patient> patients = patientRepository.findAll();
-
-        List<PatientResponseDTO> patientResponseDTOS =
-                patients.stream().map(
-                        patient
-                                -> PatientMapper.toDTO(patient)
-                ).toList();
-
+        List<PatientResponseDTO> patientResponseDTOS = patients.stream().map(patient -> PatientMapper.toDTO(patient)).toList();
         return patientResponseDTOS;
     }
 
@@ -37,14 +35,21 @@ public class PatientService {
             throw new EmailAlreadyExistsException("A patient with this email " + " already exists " + patientRequestDTO.getEmail());
         }
         Patient newPatient = patientRepository.save(PatientMapper.toModel(patientRequestDTO));
+
+        billingServiceGrpcClient.createBillingAccount( // Create a billing account for the new patient using gRPC
+                newPatient.getId().toString(),
+                newPatient.getName(),
+                newPatient.getEmail()
+        );
+
         return PatientMapper.toDTO(newPatient);
     }
 
     public PatientResponseDTO updatePatient(UUID id, PatientRequestDTO patientRequestDTO) {
         Patient patient = patientRepository.findById(id).orElseThrow(
-                ()->new PatientNotFoundException("Patient not found with ID: "+id));
+                () -> new PatientNotFoundException("Patient not found with ID: " + id));
 
-        if(patientRepository.existsByEmailAndIdNot(patientRequestDTO.getEmail(),id)){
+        if (patientRepository.existsByEmailAndIdNot(patientRequestDTO.getEmail(), id)) {
             throw new EmailAlreadyExistsException(
                     "A patient with this email " + "already exists"
                     + patientRequestDTO.getEmail());
@@ -58,11 +63,8 @@ public class PatientService {
         return PatientMapper.toDTO(updatePatient);
     }
 
-    public void deletePatient(UUID id){
+    public void deletePatient(UUID id) {
         patientRepository.deleteById(id);
     }
-
-
-
 
 }

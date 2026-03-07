@@ -1,23 +1,24 @@
 package org.example.grpc;
 
-import billing.BillingServiceGrpc;
+import billing.BillingRequest;
+import billing.BillingResponse;
 import io.grpc.stub.StreamObserver;
+import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import billing.BillingServiceGrpc.BillingServiceImplBase;
 
+@Slf4j
 @GrpcService
-public class BillingGrpcService extends BillingServiceGrpc.BillingServiceImplBase {
-    private static final Logger log = LoggerFactory.getLogger(BillingGrpcService.class);
+public class BillingGrpcService extends BillingServiceImplBase {
 
     @Override
-    public void createBillingAccount(billing.BillingRequest billingRequest,
-                                        StreamObserver<billing.BillingResponse> responseObserver){
-        log.info("createBillingAccount request received {}", billingRequest.toString());
+    public void createBillingAccount(
+            BillingRequest request,
+            StreamObserver<BillingResponse> responseObserver) {
 
-        // Business logic - eg. save to database, perform calculates etc
+        log.info("createBillingAccount request received {}", request.toString());
 
-        billing.BillingResponse response = billing.BillingResponse.newBuilder()
+        BillingResponse response = BillingResponse.newBuilder()
                 .setAccountId("12345")
                 .setStatus("ACTIVE")
                 .build();
