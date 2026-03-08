@@ -5,6 +5,8 @@ import org.example.dto.PatientResponseDTO;
 import org.example.exception.EmailAlreadyExistsException;
 import org.example.exception.PatientNotFoundException;
 import org.example.grpc.BillingServiceGrpcClient;
+import org.example.kafka.KafkaProducer;
+import org.example.kafka.PatientEvent;
 import org.example.mapper.PatientMapper;
 import org.example.model.Patient;
 import org.example.repository.PatientRepository;
@@ -18,10 +20,12 @@ public class PatientService {
 
     private PatientRepository patientRepository;
     private final BillingServiceGrpcClient billingServiceGrpcClient;
+    private final KafkaProducer kafkaProducer;
 
-    public PatientService(PatientRepository patientRepository, BillingServiceGrpcClient billingServiceGrpcClient) {
+    public PatientService(PatientRepository patientRepository, BillingServiceGrpcClient billingServiceGrpcClient, KafkaProducer kafkaProducer) {
         this.patientRepository = patientRepository;
         this.billingServiceGrpcClient = billingServiceGrpcClient;
+        this.kafkaProducer = kafkaProducer;
     }
 
     public List<PatientResponseDTO> getPatients() {
@@ -41,6 +45,14 @@ public class PatientService {
                 newPatient.getName(),
                 newPatient.getEmail()
         );
+
+        PatientEvent event = PatientEvent.newBuilder()
+                 .setPatientId(newPatient.getId().toString())
+                .setName(newPatient.getName())
+                .setEmail(newPatient.getEmail())
+                .setEventType("PATIENT_CREATED")
+                .build();
+        kafkaProducer.sendEvent(event);
 
         return PatientMapper.toDTO(newPatient);
     }

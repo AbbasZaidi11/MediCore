@@ -49,6 +49,20 @@ services:
       kafka:
         condition: service_started
 
+  analytics-service:
+    build:
+      context: ./analytics-service
+      dockerfile: Dockerfile
+    container_name: analytics-service
+    ports:
+      - "4002:4002"
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_started
+
+
   kafka:
     image: apache/kafka:latest
     container_name: kafka
@@ -64,6 +78,15 @@ services:
       KAFKA_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       CLUSTER_ID: "kafka-cluster-1"
-
+  kafka-ui:
+      image: provectuslabs/kafka-ui:latest
+      container_name: kafka-ui
+      ports:
+        - "8080:8080"
+      environment:
+        KAFKA_CLUSTERS_0_NAME: local
+        KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      depends_on:
+        - kafka
 volumes:
   postgres_data:

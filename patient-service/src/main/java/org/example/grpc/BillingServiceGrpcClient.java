@@ -1,14 +1,19 @@
 package org.example.grpc;
 
+import billing.BillingRequest;
+import billing.BillingResponse;
+import billing.BillingServiceGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 public class BillingServiceGrpcClient {
 
-    private final BillingServiceGrpcClient.BillingServiceBlockingStub blockingStub;
+    private final BillingServiceGrpc.BillingServiceBlockingStub blockingStub;
 
     //localhost: 9001/BillingService/CreatePatientAccount
     // aws.grpc: 123123/BillingService/CreatePatientAccount
@@ -23,7 +28,7 @@ public class BillingServiceGrpcClient {
                 .usePlaintext() // -- In production, you should use TLS for secure communication
                 .build(); // Create a channel to the gRPC server
 
-        blockingStub = BillingServiceGrpcClient.newBlockingStub(channel); // Create a blocking stub for making synchronous calls to the gRPC service
+        blockingStub = BillingServiceGrpc.newBlockingStub(channel); // Create a blocking stub for making synchronous calls to the gRPC service
     }
 
     public BillingResponse createBillingAccount(String patientId, String name, String email) {

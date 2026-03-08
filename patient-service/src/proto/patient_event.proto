@@ -1,0 +1,37 @@
+// Use Protocol Buffers version 3 — the modern, simplified version of protobuf.
+
+syntax = "proto3";
+
+// The proto namespace. Prevents name collisions when multiple .proto files are compiled together.
+
+package patient;
+
+// Generate each message as its own standalone .java file instead of as inner
+// classes inside a single outer wrapper class. Without this option, protoc would
+// create one outer class (named after the file), and all messages would be
+// nested inside it — which causes a compile error when the outer class name
+// matches one of the message names.
+
+option java_multiple_files = true;
+
+// The Java package where the generated classes will be placed.
+
+option java_package = "org.example.kafka";
+
+// Defines the shape of the event that gets published to Kafka whenever a patient
+// is created (or updated/deleted in the future).
+// protoc compiles this into a PatientEvent.java class with a builder, getters,
+// toByteArray() for serialisation, and parseFrom() for deserialisation.
+
+message PatientEvent {
+  // Field tag numbers (= 1, = 2, ...) identify each field in the binary encoding.
+  // NEVER change or reuse these numbers after the schema is published — doing so
+  // would break any consumer that is still on the old version.
+  string patient_id = 1;
+  string name       = 2;
+  string email      = 3;
+
+  // Describes what happened: e.g. "PATIENT_CREATED", "PATIENT_UPDATED", "PATIENT_DELETED".
+  // Lets a single topic carry multiple event types without needing separate topics.
+  string event_type = 4;
+}
