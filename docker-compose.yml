@@ -136,10 +136,13 @@ services:
     container_name: api-gateway
     ports:
       - "4004:4004"
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:4005
     depends_on:
       # The gateway routes requests to patient-service, so
       # patient-service must be up before the gateway starts.
       - patient-service
+      - auth-service
 
   # -------------------------------------------------------
   # KAFKA — Async message broker
@@ -187,6 +190,19 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
     depends_on:
       - kafka
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    container_name: auth-service
+    ports:
+      - "4005:4005"
+    environment:
+      SERVER_PORT: 4005
+      JWT_SECRET: VGhpc0lzQURldlNlY3JldEtleUZvckhTMjU2VG9rZW5TaWduaW5nMTIzNDU2Nzg5MDEyMw==
+
+
 
 # Named volumes are managed by Docker and persist across
 # container restarts. 'postgres_data' keeps your DB data safe.

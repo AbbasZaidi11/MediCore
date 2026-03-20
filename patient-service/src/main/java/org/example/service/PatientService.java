@@ -47,7 +47,7 @@ public class PatientService {
         );
 
         PatientEvent event = PatientEvent.newBuilder()
-                 .setPatientId(newPatient.getId().toString())
+                .setPatientId(newPatient.getId().toString())
                 .setName(newPatient.getName())
                 .setEmail(newPatient.getEmail())
                 .setEventType("PATIENT_CREATED")

@@ -42,6 +42,9 @@ COPY patient-service/pom.xml  ./patient-service/pom.xml
 COPY api-gateway/pom.xml      ./api-gateway/pom.xml
 COPY analytics-service/pom.xml ./analytics-service/pom.xml
 COPY billing-service/pom.xml  ./billing-service/pom.xml
+COPY auth-service/pom.xml     ./auth-service/pom.xml
+COPY integration-tests/pom.xml ./integration-tests/pom.xml
+COPY infrastructure/pom.xml   ./infrastructure/pom.xml
 
 # Download all dependencies for patient-service into the
 # local Maven cache inside this image layer.

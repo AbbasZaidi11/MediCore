@@ -7,7 +7,8 @@ import org.example.model.Patient;
 import java.time.LocalDate;
 
 public class PatientMapper {
-    public static PatientResponseDTO toDTO (Patient patient){
+
+    public static PatientResponseDTO toDTO(Patient patient) {
         PatientResponseDTO patientDTO = new PatientResponseDTO();
         patientDTO.setId(patient.getId().toString());
         patientDTO.setName(patient.getName());
@@ -16,7 +17,8 @@ public class PatientMapper {
         patientDTO.setDateOfBirth(patient.getDateOfBirth().toString());
         return patientDTO;
     }
-    public static Patient toModel(PatientRequestDTO patientRequestDTO){
+
+    public static Patient toModel(PatientRequestDTO patientRequestDTO) {
         Patient patient = new Patient();
         patient.setName(patientRequestDTO.getName());
         patient.setAddress(patientRequestDTO.getAddress());

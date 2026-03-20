@@ -8,8 +8,19 @@ import javax.annotation.processing.Generated;
 import java.time.LocalDate;
 import java.util.UUID;
 
+// HTTP Request
+//     ↓
+// PatientController
+//     ↓
+// PatientService.createPatient()
+//     ├── PostgreSQL (save patient)
+//     ├── gRPC → billing-service (create account) ← waits for response
+//     └── Kafka topic "patient" (publish PATIENT_CREATED event) ← fire and forget
+//     ↓
+// PatientResponseDTO back to caller
 @Entity
 public class Patient {
+
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
@@ -70,7 +81,6 @@ public class Patient {
     public void setDateOfBirth(LocalDate dateOfBirth) {
         this.dateOfBirth = dateOfBirth;
     }
-
 
     public UUID getId() {
         return id;

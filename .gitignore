@@ -39,8 +39,17 @@ build/
 
 ### PostgreSQL data (runtime database files - never commit these) ###
 postgres-data/
+auth-service-data/
+
+### Infrastructure build artifacts ###
+infrastructure/cdk.out/
+
+### Java upgrade/migration backups ###
+.github/java-upgrade/*/
 
 ### IntelliJ IDEA additional ###
 .idea/
 
+### Application properties (environment-specific) ###
 **/application.properties
+**/application-*.properties

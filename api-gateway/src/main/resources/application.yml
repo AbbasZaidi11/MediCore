@@ -3,10 +3,23 @@
 server:
   port: 4004
 
+# Auth service base URL used by JwtValidationGatewayFilterFactory.
+# Can be overridden by AUTH_SERVICE_URL env var.
+auth-service:
+  url: ${AUTH_SERVICE_URL:http://auth-service:4005}
+
 spring:
   cloud:
     gateway:
       routes:
+       ## http://localhost:4004/auth/login  ->  http://auth-service:4005/login
+       ### API GATEWAY -> http://auth-service:4005/login
+        - id: auth-service-route
+          uri: http://auth-service:4005
+          predicates:
+            - Path=/auth/**
+          filters:
+            - StripPrefix=1
 
         # -------------------------------------------------------
         # ROUTE 1: Forward patient API calls to patient-service
@@ -25,6 +38,7 @@ spring:
           # /api/patients/123  ->  /patients/123
           filters:
             - StripPrefix=1
+            - JwtValidation
 
           # Request flow:
           #   Client calls  : http://localhost:4004/api/patients
@@ -48,4 +62,11 @@ spring:
 
           # Request flow:
           #   Client calls  : http://localhost:4004/api-docs/patients
-          #   Gateway sends : http://patient-service:4000/v3/api-docs
+          #   Gateway sends : http://patient-service:4000/v3/api-
+          
+        - id: api-docs-auth-route
+          uri: http://auth-service:4005
+          predicates:
+            - Path=/api-docs/auth
+          filters:
+            - RewritePath=/api-docs/auth, /v3/api-docs

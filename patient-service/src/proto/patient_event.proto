@@ -1,3 +1,7 @@
+
+// patient_event.proto generates PatientEvent.java in org.example.kafka:
+
+
 // Use Protocol Buffers version 3 — the modern, simplified version of protobuf.
 
 syntax = "proto3";
