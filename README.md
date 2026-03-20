@@ -1,4 +1,4 @@
-# PatientManagementSystem
+# MediCore
 
 A healthcare backend built around a microservices architecture — five services communicating via REST, gRPC, and Kafka, all wired together with Docker Compose.
 
