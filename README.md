@@ -1,6 +1,6 @@
 # PatientManagementSystem
 
-> **Production-grade microservices backend demonstrating enterprise Java architecture**
+A healthcare backend built around a microservices architecture — five services communicating via REST, gRPC, and Kafka, all wired together with Docker Compose.
 
 ![Java 21](https://img.shields.io/badge/Java-21-orange?logo=openjdk&logoColor=white)
 ![Spring Boot 3.2](https://img.shields.io/badge/Spring%20Boot-3.2.5-brightgreen?logo=springboot&logoColor=white)
@@ -11,307 +11,121 @@
 
 ---
 
-## 📌 Quick Overview
+## Overview
 
-A **5-microservice healthcare platform** showcasing distributed systems mastery:
-
-- ✅ **5 Independent Services** (patient, billing, analytics, auth, gateway)
-- ✅ **3 Communication Patterns**: REST → gRPC (type-safe) → Kafka (async events)
-- ✅ **JWT Authentication** with BCrypt hashing
-- ✅ **Event-Driven Architecture** (loosely coupled via Kafka KRaft)
-- ✅ **Docker Compose** orchestration (one-command startup)
-- ✅ **Integration Tests** validating end-to-end flows
-- ✅ **Production-Ready**: Error handling, logging, health checks
-
-**Why it matters:** Demonstrates system design thinking, architectural trade-offs, and production-grade engineering patterns used at FAANG companies.
-
----
-
-## 🏗️ Architecture
+The system handles patient registration and propagates events downstream — billing gets a synchronous gRPC call, analytics gets an async Kafka event. The split is intentional: billing needs a confirmation before the response goes back, analytics doesn't.
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Docker Compose Network                       │
-│                                                                 │
-│  REST Client → api-gateway (Port 4004)                         │
-│                    ↓                                            │
-│         ┌──────────┴──────────┐                                │
-│         ↓                     ↓                                 │
-│    auth-service         patient-service                        │
-│    (JWT Issuer)         (Main API)                             │
-│    Port 4005            Port 4000                              │
-│    H2 + BCrypt          PostgreSQL + UUID                      │
-│                              ↓                                 │
-│                    ┌─────────┼────────┐                        │
-│                    ↓         ↓        ↓                        │
-│              gRPC Call  Kafka Pub   billing-service            │
-│              (Binary)   (Events)    (gRPC Server)              │
-│                              ↓                                 │
-│                        analytics-service                       │
-│                        (Kafka Consumer)                        │
-│                        Port 4002                               │
-│                                                                │
-│  ┌──────────────────────────────────────────┐                 │
-│  │    Apache Kafka (KRaft - No Zookeeper)   │                 │
-│  │  • patient-events topic (Protobuf)       │                 │
-│  │  • Kafka UI: Port 8080                   │                 │
-│  └──────────────────────────────────────────┘                 │
-└─────────────────────────────────────────────────────────────────┘
+REST Client → api-gateway (4004)
+                    ↓
+         ┌──────────┴──────────┐
+         ↓                     ↓
+    auth-service         patient-service
+    (JWT / H2)           (PostgreSQL)
+                              ↓
+                    ┌─────────┼──────────┐
+                    ↓                    ↓
+             billing-service     analytics-service
+             (gRPC server)       (Kafka consumer)
+
+Apache Kafka (KRaft) — no Zookeeper, patient-events topic (Protobuf)
 ```
 
 ---
 
-## 🔑 Key Architectural Decisions
+## Services
 
-### 1. **Microservices (not monolith)**
-- Clear domain boundaries → independent scaling
-- Each service owns its database
-- Deploy independently without downtime
-
-### 2. **gRPC for Sync Calls** (patient → billing)
-- Contract-first design (`.proto` enforced at compile time)
-- Binary encoding ~10x faster than JSON
-- Type-safe service stubs prevent drift
-
-### 3. **Kafka for Async Events** (patient → analytics)
-- Fire-and-forget pattern
-- Loose coupling: analytics failures don't impact registration
-- Consumer can lag or scale independently
-- Event replay capability for debugging
-
-### 4. **JWT Authentication** (stateless, scalable)
-- No session storage needed
-- Can scale horizontally (no sticky sessions)
-- Token validation at edge (api-gateway)
+| Service | Port | Role |
+|---------|------|------|
+| api-gateway | 4004 | JWT validation, request routing |
+| patient-service | 4000 | Core CRUD, triggers gRPC + Kafka |
+| auth-service | 4005 | Token issuance, BCrypt hashing |
+| billing-service | 9001 | gRPC server, billing account management |
+| analytics-service | 4002 | Kafka consumer, event processing |
 
 ---
 
-## 📊 Services at a Glance
+## Getting Started
 
-| Service | Port | Tech | Purpose |
-|---------|------|------|---------|
-| **patient-service** | 4000 | REST/Spring | Core patient CRUD → triggers gRPC + Kafka |
-| **auth-service** | 4005 | JWT/Spring | Stateless token issuer, BCrypt hashing |
-| **billing-service** | 9001 | gRPC | Internal service for billing accounts |
-| **analytics-service** | 4002 | Kafka Consumer | Async event processing (decoupled) |
-| **api-gateway** | 4004 | Spring Cloud | Request routing, JWT validation, exception handling |
-| **Kafka** | 9094 | KRaft Mode | Event streaming (no Zookeeper) |
-| **PostgreSQL** | 5432 | Database | Patient data with ACID guarantees |
-
----
-
-## 🚀 Getting Started
-
-### Fastest Way (Docker Compose)
 ```bash
 docker compose up --build
 ```
 
-Starts all 5 services + PostgreSQL + Kafka with one command. All inter-service connectivity automatically configured.
+Starts everything — PostgreSQL, Kafka, all five services. No manual wiring needed.
 
-### Local Development
+For local dev, start billing-service first (patient-service makes a gRPC call to it on startup):
+
 ```bash
-# Build all modules
-mvn clean install
-
-# Start each service in different terminal (billing-service first!):
 cd billing-service && mvn spring-boot:run
 cd analytics-service && mvn spring-boot:run
 cd auth-service && mvn spring-boot:run
 cd patient-service && mvn spring-boot:run
 ```
 
-### Endpoints
-- **Patient API**: http://localhost:4000/api/patients
-- **Swagger UI**: http://localhost:4000/swagger-ui.html
-- **Kafka UI**: http://localhost:8080
-- **Auth Service**: http://localhost:4005/auth/login
-
 ---
 
-## 🧪 Integration Tests
-
-End-to-end tests validating real service interaction:
+## Example: Creating a Patient
 
 ```bash
-mvn clean test -f integration-tests/pom.xml
-```
-
-**Tests included:**
-- ✅ JWT authentication flow (token generation, validation, expiry)
-- ✅ Patient CRUD with bearer token
-- ✅ gRPC call to billing-service
-- ✅ Kafka event publishing
-
----
-
-## 💡 Example Flow: Creating a Patient
-
-```bash
-# 1. Get JWT token
+# Authenticate
 curl -X POST http://localhost:4005/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@test.com","password":"password123"}'
 
-# 2. Create patient (triggers gRPC + Kafka)
+# Create patient
 curl -X POST http://localhost:4000/api/patients \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{"name":"John Doe","email":"john@example.com","dateOfBirth":"1990-01-15"}'
 ```
 
-**What happens internally:**
-1. API Gateway validates JWT → routes to patient-service
-2. patient-service saves to PostgreSQL
-3. **Synchronous gRPC call**: patient-service → billing-service
-4. **Asynchronous Kafka publish**: PatientEvent topic
-5. analytics-service consumes event asynchronously
-6. Response returned immediately (analytics handles async)
-
-**Demonstrates:** Synchronous vs async trade-offs, eventual consistency, service orchestration.
+On creation, patient-service saves to PostgreSQL, makes a synchronous gRPC call to billing-service, and publishes a Protobuf-encoded event to Kafka. The analytics-service picks it up asynchronously — its failure doesn't affect the response.
 
 ---
 
-## 🛠️ Tech Stack Rationale
+## Testing
 
-| Component | Why |
-|-----------|-----|
-| **Java 21** | Latest LTS with modern features (records, sealed classes) |
-| **Spring Boot 3.2** | Industry standard, battle-tested ecosystem |
-| **Spring Data JPA** | Reduces boilerplate, enables domain-driven design |
-| **PostgreSQL 17** | ACID guarantees for patient data consistency |
-| **Apache Kafka (KRaft)** | Distributed event log, 3.x production best practice (no Zookeeper) |
-| **gRPC + Protobuf** | Type-safe RPC, binary encoding, contract-first design |
-| **Spring Security + JJWT** | Standards-based auth, token management |
-| **Docker + Compose** | Reproducible deployments, local dev mirrors production |
-| **JUnit 5 + REST-Assured** | Modern testing framework, HTTP testing fluency |
+```bash
+mvn clean test -f integration-tests/pom.xml
+```
+
+Integration tests cover the full flow: auth token lifecycle, patient CRUD behind JWT, gRPC round-trip to billing, and Kafka event publishing.
 
 ---
 
-## 🏆 Design Patterns Implemented
-
-- **Repository Pattern** → Data access abstraction
-- **Service Layer** → Business logic isolation
-- **DTO Pattern** → API contracts separate from entities
-- **Global Exception Handler** → Centralized error responses
-- **Validation Groups** → Conditional validation (POST vs PUT)
-- **Kafka Producer/Consumer** → Event-driven communication
-- **API Gateway** → Single entry point, cross-cutting concerns
-- **gRPC Stubs** → Type-safe inter-service calls
-
----
-
-## 🔐 Security Practices
-
-- ✅ **JWT Tokens** (stateless, scalable)
-- ✅ **BCrypt Hashing** (salt-based, never plaintext passwords)
-- ✅ **Spring Security** (framework-wide authorization)
-- ✅ **Input Validation** (Jakarta Bean Validation prevents injection)
-- ✅ **API Gateway** (centralized authentication at edge)
-- ✅ **HTTPS-Ready** (easily extensible with TLS)
-
----
-
-## 📈 What This Demonstrates
-
-### For Senior Backend Roles
-- ✅ System design (5 services, multiple communication patterns)
-- ✅ Distributed systems thinking (eventual consistency, trade-offs)
-- ✅ Production readiness (Docker, logging, error handling, tests)
-- ✅ Architectural decision-making (gRPC vs REST vs Kafka - why each?)
-
-### For Interview Discussions
-1. **"Explain your architecture"**
-   - 5 microservices with clear responsibilities
-   - REST for external clients, gRPC for internal, Kafka for events
-   - Why each pattern fits its use case
-
-2. **"How would you scale this?"**
-   - Each service scales independently
-   - Kafka naturally handles consumer scaling
-   - Stateless JWT auth enables horizontal scaling
-
-3. **"What's production-ready about this?"**
-   - Docker containerization with multi-stage builds
-   - Proper error handling and logging
-   - Integration tests validating deployment
-   - Health checks and resource limits
-
-4. **"What would you add next?"**
-   - Circuit breakers (Resilience4j)
-   - Distributed tracing (Jaeger)
-   - Prometheus metrics
-   - Kubernetes manifests
-   - Database migrations (Flyway)
-
----
-
-## 📂 Project Structure
+## Project Structure
 
 ```
 PatientManagementSystem/
-├── patient-service/          # REST API (port 4000)
-│   ├── src/main/controller/  # REST endpoints
-│   ├── src/main/service/     # Business logic
-│   ├── src/main/grpc/        # gRPC client
-│   └── src/main/kafka/       # Kafka producer
-│
-├── auth-service/             # JWT issuer (port 4005)
-│   ├── src/main/controller/  # Auth endpoints
-│   ├── src/main/util/        # JwtUtil, BCrypt
-│   └── src/main/resources/   # H2 seed data
-│
-├── billing-service/          # gRPC server (port 9001)
-│   ├── src/main/grpc/        # gRPC service impl
-│   └── src/proto/            # billing_service.proto
-│
-├── analytics-service/        # Kafka consumer (port 4002)
-│   ├── src/main/kafka/       # Kafka listener
-│   └── src/proto/            # patient_event.proto
-│
-├── api-gateway/              # API Gateway (port 4004)
-│   ├── src/main/filter/      # JWT validation filter
-│   └── src/main/exception/   # Global error handling
-│
-├── integration-tests/        # End-to-end tests
-│   └── src/test/java/        # AuthIntegrationTest, PatientIntegrationTest
-│
-├── docker-compose.yml        # Full stack orchestration
-└── pom.xml                   # Parent POM (shared versions)
+├── patient-service/       # REST API, gRPC client, Kafka producer
+├── auth-service/          # JWT util, BCrypt, H2 seed data
+├── billing-service/       # gRPC server impl, billing.proto
+├── analytics-service/     # Kafka listener, patient_event.proto
+├── api-gateway/           # JWT filter, global exception handling
+├── integration-tests/     # End-to-end test suite
+├── docker-compose.yml
+└── pom.xml                # Parent POM with shared dependency versions
 ```
 
 ---
 
-## ✨ Next Steps
+## Stack
 
-### To Run Locally
-```bash
-docker compose up --build
-```
-
-### To Test
-```bash
-mvn clean test
-```
-
-### To Explore Code
-- **REST API patterns**: `patient-service/src/main/controller/`
-- **gRPC implementation**: `billing-service/src/main/grpc/`
-- **Kafka integration**: `patient-service/src/main/kafka/`
-- **Security**: `auth-service/src/main/util/JwtUtil.java`
-- **Tests**: `integration-tests/src/test/java/`
+- **Java 21** — records, sealed classes, modern LTS
+- **Spring Boot 3.2** — web, security, data JPA
+- **Apache Kafka (KRaft)** — no Zookeeper, 3.x production config
+- **gRPC + Protobuf 3** — binary RPC, contract-first
+- **PostgreSQL 17** — patient data, ACID guarantees
+- **Spring Security + JJWT** — stateless JWT auth
+- **Docker Compose** — single-command local environment
+- **JUnit 5 + REST-Assured** — integration test coverage
 
 ---
 
-## 🎓 Learning Resources
+## What's Next
 
-- [System Design Interview Prep](https://www.interviewbit.com/courses/system-design-interview/)
-- [Apache Kafka Documentation](https://kafka.apache.org/documentation/)
-- [gRPC Java Guide](https://grpc.io/docs/languages/java/)
-- [Spring Boot Best Practices](https://spring.io/guides)
-
----
-
-**Built to showcase enterprise engineering excellence for career growth.** 🚀
-
-*Created: March 2026 | Status: Production-Ready*
+- Circuit breakers (Resilience4j)
+- Distributed tracing (Jaeger or OpenTelemetry)
+- Prometheus + Grafana metrics
+- Flyway for schema migrations
+- Kubernetes manifests
